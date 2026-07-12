@@ -1,0 +1,19 @@
+# if you need to add a command, feel free. just ask z if you have any questions!
+name: FATFSCore
+version: 1.0
+
+main: com.zskv.fATFSCore.FATFSCore
+api-version: '26.1'
+commands:
+  event:
+    description: "Main command for the event"
+    usage: "/event <subcommand>"
+  readycheck:
+    description: "Ready check management"
+    usage: "/readycheck <subcommand>"
+  admin:
+    description: "Admin mode management"
+    usage: "/admin <add|remove> <player>"
+  dev:
+    description: "Dev mode management"
+    usage: "/dev <add|remove> <player>"

@@ -1,0 +1,27 @@
+
+# teams are in a yml file so they can easily be changed.
+teams:
+  red:
+    name: "Scarlet Sniffers"
+    color: "RED"
+  orange:
+    name: "Citrus Camels"
+    color: "GOLD"
+  yellow:
+    name: "Dandelion Dolphins"
+    color: "YELLOW"
+  green:
+    name: "Meadow Mules"
+    color: "LIME"
+  aqua:
+    name: "Aegean Allays"
+    color: "AQUA"
+  blue:
+    name: "Cobalt Cows"
+    color: "BLUE"
+  purple:
+    name: "Grape Ghasts"
+    color: "DARK_PURPLE"
+  pink:
+    name: "Magenta Mooshrooms"
+    color: "LIGHT_PURPLE"
