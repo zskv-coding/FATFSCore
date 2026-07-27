@@ -166,10 +166,12 @@ public class ScoreboardManager {
             case GOLD -> 2;
             case YELLOW -> 3;
             case GREEN -> 4;
-            case AQUA -> 5;
-            case BLUE -> 6;
-            case DARK_PURPLE -> 7;
-            case LIGHT_PURPLE -> 8;
+            case DARK_GREEN -> 5;
+            case AQUA -> 6;
+            case DARK_AQUA -> 7;
+            case BLUE -> 8;
+            case DARK_PURPLE -> 9;
+            case LIGHT_PURPLE -> 10;
             default -> 99;
         };
     }
