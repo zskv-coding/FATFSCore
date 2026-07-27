@@ -1,4 +1,4 @@
-package com.zskv.fATFSCore.minigames.squabble;
+package com.zskv.fATFSCore.minigames.Squabble;
 
 import com.zskv.fATFSCore.FATFSCore;
 import org.bukkit.ChatColor;

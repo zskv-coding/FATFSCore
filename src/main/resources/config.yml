@@ -1,4 +1,3 @@
-
 # teams are in a yml file so they can easily be changed.
 teams:
   red:
