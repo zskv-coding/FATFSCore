@@ -1,0 +1,34 @@
+# burger, if you do end up touching these values know that Hide & Seek won't work. please ask me (z) before touching anything!
+
+world: hideseek
+
+spawn:
+  x: 0
+  y: 100
+  z: 0
+  yaw: 0
+  pitch: 0
+
+door-gap: 0
+
+border:
+  # empty space between the outermost room walls and the border wall
+  margin: 3
+  # thickness of the wall
+  thickness: 1
+  # how far the wall extends above and below the built rooms
+  height-padding: 5
+
+schematics:
+  spawn: spawn_room.schem
+  pool:
+    - bastion_room.schem
+    - copper_room.schem
+    - deep_dark_room.schem
+    - dripstone_room.schem
+    - mesa_room.schem
+    - nether_room.schem
+    - packed_mud_room.schem
+    - pyramid_room.schem
+    - terracotta_room.schem
+    - village_room.schem

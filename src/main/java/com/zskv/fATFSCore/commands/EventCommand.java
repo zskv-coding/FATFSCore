@@ -252,6 +252,20 @@ public class EventCommand implements CommandExecutor, TabCompleter {
             } else {
                 player.sendMessage(ChatColor.RED + "Unknown action. Use start or stop.");
             }
+        } else if (gameId.equalsIgnoreCase("hideseek")) {
+            if (action.equals("start")) {
+                plugin.getHideSeekManager().startSequence(player);
+                player.sendMessage(ChatColor.GREEN + "Starting Hide and Seek...");
+            } else if (action.equals("stop")) {
+                if (args.length < 4 || !args[3].equalsIgnoreCase("confirm")) {
+                    player.sendMessage(ChatColor.YELLOW + "Are you sure? Use " + ChatColor.GOLD + "/event game stop hideseek confirm" + ChatColor.YELLOW + " to stop the game.");
+                    return;
+                }
+                plugin.getHideSeekManager().stopGame(true);
+                player.sendMessage(ChatColor.RED + "Stopping Hide and Seek...");
+            } else {
+                player.sendMessage(ChatColor.RED + "Unknown action. Use start or stop.");
+            }
         } else {
             player.sendMessage(ChatColor.RED + "Unknown game: " + gameId);
         }
@@ -375,6 +389,7 @@ public class EventCommand implements CommandExecutor, TabCompleter {
         } else if (args.length == 3) {
             if (args[0].equalsIgnoreCase("game") && sender.hasPermission("event.admin")) {
                 completions.add("squabble");
+                completions.add("hideseek");
                 completions.add("duels");
             } else if (args[0].equalsIgnoreCase("team")) {
                 if (args[1].equalsIgnoreCase("join") || args[1].equalsIgnoreCase("delete")) {

@@ -1,10 +1,6 @@
-package com.zskv.fATFSCore.minigames.squabble;
+package com.zskv.fATFSCore.minigames.Squabble;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;

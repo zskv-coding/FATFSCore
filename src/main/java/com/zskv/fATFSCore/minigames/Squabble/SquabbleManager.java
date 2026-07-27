@@ -1,4 +1,4 @@
-package com.zskv.fATFSCore.minigames.squabble;
+package com.zskv.fATFSCore.minigames.Squabble;
 
 import com.zskv.fATFSCore.FATFSCore;
 import com.zskv.fATFSCore.teams.Team;
@@ -11,13 +11,10 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 
-import java.io.File;
 import java.util.*;
 
 public class SquabbleManager {

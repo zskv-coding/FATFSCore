@@ -1,4 +1,4 @@
-package com.zskv.fATFSCore.minigames.squabble;
+package com.zskv.fATFSCore.minigames.Squabble;
 
 import org.bukkit.Material;
 import org.bukkit.block.Block;

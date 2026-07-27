@@ -6,6 +6,8 @@ import com.zskv.fATFSCore.commands.AdminCommand;
 import com.zskv.fATFSCore.commands.DevCommand;
 import com.zskv.fATFSCore.listeners.ChatListener;
 import com.zskv.fATFSCore.listeners.PlayerListener;
+import com.zskv.fATFSCore.minigames.HideSeek.HideSeekListener;
+import com.zskv.fATFSCore.minigames.HideSeek.HideSeekManager;
 import com.zskv.fATFSCore.readycheck.ReadyCheckManager;
 import com.zskv.fATFSCore.admin.AdminManager;
 import com.zskv.fATFSCore.scoreboard.ScoreboardManager;
@@ -14,8 +16,8 @@ import com.zskv.fATFSCore.scores.ScoreManager;
 import com.zskv.fATFSCore.teams.Team;
 import com.zskv.fATFSCore.teams.TeamManager;
 import com.zskv.fATFSCore.bossbar.BossBarManager;
-import com.zskv.fATFSCore.minigames.squabble.SquabbleListener;
-import com.zskv.fATFSCore.minigames.squabble.SquabbleManager;
+import com.zskv.fATFSCore.minigames.Squabble.SquabbleListener;
+import com.zskv.fATFSCore.minigames.Squabble.SquabbleManager;
 import com.zskv.fATFSCore.timer.TimerManager;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
@@ -37,6 +39,7 @@ public final class FATFSCore extends JavaPlugin {
     private TimerManager timerManager;
     private BossBarManager bossBarManager;
     private SquabbleManager squabbleManager;
+    private HideSeekManager hideSeekManager;
 
     private File dataFile;
     private FileConfiguration dataConfig;
@@ -45,7 +48,7 @@ public final class FATFSCore extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         createDataConfig();
-        
+
         this.teamManager = new TeamManager(this);
         this.scoreboardManager = new ScoreboardManager(this);
         this.scoreManager = new ScoreManager(this);
@@ -55,6 +58,7 @@ public final class FATFSCore extends JavaPlugin {
         this.bossBarManager = new BossBarManager(this);
         this.timerManager = new TimerManager(this);
         this.squabbleManager = new SquabbleManager(this);
+        this.hideSeekManager = new HideSeekManager(this);
 
         loadTeams();
         loadData();
@@ -78,6 +82,8 @@ public final class FATFSCore extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ChatListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new SquabbleListener(this, squabbleManager), this);
+        getServer().getPluginManager().registerEvents(new HideSeekListener(hideSeekManager), this);
+
         // Plugin startup logic
     }
 
@@ -106,7 +112,7 @@ public final class FATFSCore extends JavaPlugin {
         getConfig().set("teams." + id.toLowerCase() + ".name", name);
         getConfig().set("teams." + id.toLowerCase() + ".color", color.name());
         saveConfig();
-        
+
         Team team = new Team(id.toLowerCase(), name, color);
         teamManager.registerTeam(team);
     }
@@ -114,7 +120,7 @@ public final class FATFSCore extends JavaPlugin {
     public void deleteTeam(String id) {
         getConfig().set("teams." + id.toLowerCase(), null);
         saveConfig();
-        
+
         teamManager.unregisterTeam(id);
         if (scoreboardManager != null) {
             scoreboardManager.updateAll();
@@ -188,7 +194,7 @@ public final class FATFSCore extends JavaPlugin {
         this.bossBarManager = new BossBarManager(this);
         this.timerManager = new TimerManager(this);
         loadTeams();
-        
+
         scoreboardManager.updateAll();
     }
 
@@ -226,5 +232,9 @@ public final class FATFSCore extends JavaPlugin {
 
     public SquabbleManager getSquabbleManager() {
         return squabbleManager;
+    }
+
+    public HideSeekManager getHideSeekManager() {
+        return hideSeekManager;
     }
 }
