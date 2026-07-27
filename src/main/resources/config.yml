@@ -1,26 +1,32 @@
 # teams are in a yml file so they can easily be changed.
 teams:
   red:
-    name: "Scarlet Sniffers"
+    name: "Red Raptors"
     color: "RED"
   orange:
-    name: "Citrus Camels"
+    name: "Coral Carnotaurs"
     color: "GOLD"
   yellow:
-    name: "Dandelion Dolphins"
+    name: "Dandelion Dimetrodons"
     color: "YELLOW"
+  mint:
+    name: "Mint Mammoths"
+    color: "GREEN"
   green:
-    name: "Meadow Mules"
-    color: "LIME"
-  aqua:
-    name: "Aegean Allays"
+    name: "Green Gallimimus"
+    color: "DARK_GREEN"
+  teal:
+    name: "Teal Triceratops"
     color: "AQUA"
+  turquoise:
+    name: "Turquoise Tyrannosaurs"
+    color: "DARK_AQUA"
   blue:
-    name: "Cobalt Cows"
+    name: "Sapphire Spinosaurs"
     color: "BLUE"
   purple:
-    name: "Grape Ghasts"
+    name: "Amethyst Ankylosaurs"
     color: "DARK_PURPLE"
   pink:
-    name: "Magenta Mooshrooms"
+    name: "Salmon Stegosaurs"
     color: "LIGHT_PURPLE"
