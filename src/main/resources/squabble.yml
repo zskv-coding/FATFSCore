@@ -1,0 +1,119 @@
+world-name: "Squabble"
+
+schematic-paste-location:
+  x: 0.5
+  y: 91
+  z: 0.5
+
+settings:
+  max-survival-reward-deaths: 10
+  damage-pool-total: 550
+  total-rounds: 4
+
+  starting-border-size: 100
+  starting-sky-height: 146
+  min-sky-height: 85
+  fall-elimination-min-y: 60
+
+  round-duration-seconds: 120
+  how-to-play-seconds: 20
+  starting-in-seconds: 30
+  final-countdown-seconds: 10
+  next-round-seconds: 10
+
+  overtime-interval-seconds: 20
+  overtime-warning-lead-seconds: 5
+  overtime-health-drain: 2.0
+  overtime-min-health: 6.0
+  overtime-border-shrink-amount: 15
+  overtime-border-transition-seconds: 15
+  overtime-border-minimum: 2
+  overtime-sky-shrink-amount: 10
+
+loot-scan:
+  center-x: 0
+  center-z: 0
+  radius: 110
+  min-y: 72
+  max-y: 100
+
+teams:
+  red:
+    spawn-min: { x: 49, y: 82, z: -1 }
+    spawn-max: { x: 52, y: 82, z: 1 }
+    barrier-min: { x: 48, y: 82, z: -2 }
+    barrier-max: { x: 52, y: 87, z: 2 }
+    spawn-block: RED_WOOL
+    armor-color: "FF0000"
+
+  orange:
+    spawn-min: { x: 39, y: 82, z: 28 }
+    spawn-max: { x: 41, y: 82, z: 30 }
+    barrier-min: { x: 38, y: 82, z: 27 }
+    barrier-max: { x: 42, y: 86, z: 31 }
+    spawn-block: ORANGE_WOOL
+    armor-color: "FFAA00"
+
+  yellow:
+    spawn-min: { x: 14, y: 82, z: 46 }
+    spawn-max: { x: 16, y: 82, z: 48 }
+    barrier-min: { x: 13, y: 82, z: 45 }
+    barrier-max: { x: 17, y: 88, z: 49 }
+    spawn-block: YELLOW_WOOL
+    armor-color: "FFFF55"
+
+  mint:
+    spawn-min: { x: -17, y: 82, z: 46 }
+    spawn-max: { x: -15, y: 82, z: 48 }
+    barrier-min: { x: -18, y: 82, z: 45 }
+    barrier-max: { x: -14, y: 87, z: 49 }
+    spawn-block: LIME_WOOL
+    armor-color: "55FF55"
+
+  green:
+    spawn-min: { x: -42, y: 82, z: 28 }
+    spawn-max: { x: -40, y: 82, z: 30 }
+    barrier-min: { x: -43, y: 82, z: 27 }
+    barrier-max: { x: -39, y: 88, z: 31 }
+    spawn-block: GREEN_WOOL
+    armor-color: "00AA00"
+
+  teal:
+    spawn-min: { x: -51, y: 82, z: -1 }
+    spawn-max: { x: -49, y: 82, z: 1 }
+    barrier-min: { x: -52, y: 82, z: -2 }
+    barrier-max: { x: -48, y: 87, z: 2 }
+    spawn-block: LIGHT_BLUE_WOOL
+    armor-color: "55FFFF"
+
+  turquoise:
+    spawn-min: { x: -42, y: 82, z: -31 }
+    spawn-max: { x: -40, y: 82, z: -29 }
+    barrier-min: { x: -43, y: 82, z: -32 }
+    barrier-max: { x: -39, y: 88, z: -28 }
+    spawn-block: CYAN_WOOL
+    armor-color: "00AAAA"
+
+  blue:
+    spawn-min: { x: -17, y: 82, z: -49 }
+    spawn-max: { x: -15, y: 82, z: -47 }
+    barrier-min: { x: -18, y: 82, z: -50 }
+    barrier-max: { x: -14, y: 88, z: -46 }
+    spawn-block: BLUE_WOOL
+    armor-color: "5555FF"
+
+  purple:
+    spawn-min: { x: 14, y: 82, z: -49 }
+    spawn-max: { x: 16, y: 82, z: -47 }
+    barrier-min: { x: 13, y: 82, z: -50 }
+    barrier-max: { x: 17, y: 88, z: -46 }
+    spawn-block: PURPLE_WOOL
+    armor-color: "AA00AA"
+
+  pink:
+    spawn-min: { x: 39, y: 82, z: -31 }
+    spawn-max: { x: 41, y: 82, z: -29 }
+    barrier-min: { x: 38, y: 82, z: -32 }
+    barrier-max: { x: 42, y: 88, z: -28 }
+    spawn-block: PINK_WOOL
+    armor-color: "FF55FF"

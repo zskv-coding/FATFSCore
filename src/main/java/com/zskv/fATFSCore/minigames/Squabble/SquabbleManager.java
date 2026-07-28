@@ -30,8 +30,6 @@ public class SquabbleManager {
     private final Map<UUID, BukkitTask> logoutTasks = new HashMap<>();
     private final Map<Location, BlockState> changedBlocks = new HashMap<>();
     private int deathsThisRound = 0;
-    private static final int MAX_SURVIVAL_REWARD_DEATHS = 10;
-    private static final int DAMAGE_POOL_TOTAL = 550;
     private BukkitTask fallEliminationTask;
     private BukkitTask actionBarTask;
     private BukkitTask borderShrinkTask;
@@ -41,7 +39,6 @@ public class SquabbleManager {
     private double currentSkyHeight = 146;
     private BossBar nextRoundBossBar;
 
-    // Map for mineable blocks and their required tools
     private static final Map<Material, Material> MINEABLE_BLOCKS = new EnumMap<>(Material.class);
     static {
         MINEABLE_BLOCKS.put(Material.COAL_ORE, Material.WOODEN_PICKAXE);
@@ -84,8 +81,8 @@ public class SquabbleManager {
         lastAttacker.clear();
         changedBlocks.clear();
         deathsThisRound = 0;
-        currentBorderSize = 100; // Reset border size for new game
-        currentSkyHeight = 146;
+        currentBorderSize = SquabbleMap.STARTING_BORDER_SIZE;
+        currentSkyHeight = SquabbleMap.STARTING_SKY_HEIGHT;
 
         World world = Bukkit.getWorld(SquabbleMap.WORLD_NAME);
         if (world == null) {
@@ -94,7 +91,6 @@ public class SquabbleManager {
             return;
         }
 
-        // Set up world border
         WorldBorder border = world.getWorldBorder();
         border.setCenter(0, 0);
         border.setSize(currentBorderSize);
@@ -103,21 +99,19 @@ public class SquabbleManager {
         border.setWarningDistance(10);
         border.setWarningTime(15);
 
-        // Teleport all players and give kits
         teleportAndKitPlayers(world);
         teleportStaff(world);
-        fillLootBoxes(world);
+        SquabbleLoot.restock(world, plugin);
 
-        // Show game start title
         for (UUID uuid : alivePlayers.keySet()) {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null) {
-                player.sendTitle(ChatColor.AQUA + "Squabble", ChatColor.WHITE + "Round " + currentRound + "/4", 10, 70, 20);
+                player.sendTitle(ChatColor.AQUA + "Squabble", ChatColor.WHITE + "Round " + currentRound + "/" + SquabbleMap.TOTAL_ROUNDS, 10, 70, 20);
             }
         }
 
         if (currentRound == 1) {
-            plugin.getTimerManager().startTimer("How to Play", 20, () -> {
+            plugin.getTimerManager().startTimer("How to Play", SquabbleMap.HOW_TO_PLAY_SECONDS, () -> {
                 startRound();
             });
         } else {
@@ -127,22 +121,23 @@ public class SquabbleManager {
 
     private void startRound() {
         gameStarted = false;
-        restoreMap(); // Ensure the map and entities are cleared before starting the round sequence
+        restoreMap();
         roundDamage.clear();
         roundKills.clear();
         deathsThisRound = 0;
         plugin.getPlayerScoreManager().resetRoundCoins();
         
         // Reset player states for the round
+
         World world = Bukkit.getWorld(SquabbleMap.WORLD_NAME);
         if (world != null && currentRound > 1) {
             alivePlayers.clear();
             teleportAndKitPlayers(world);
             teleportStaff(world);
-            fillLootBoxes(world);
+            SquabbleLoot.restock(world, plugin);
         }
 
-        plugin.getTimerManager().startTimer("Starting In", 30, this::startGame);
+        plugin.getTimerManager().startTimer("Starting In", SquabbleMap.STARTING_IN_SECONDS, this::startGame);
 
         new BukkitRunnable() {
             @Override
@@ -151,12 +146,12 @@ public class SquabbleManager {
                     startCountdown();
                 }
             }
-        }.runTaskLater(plugin, 20 * 20L);
+        }.runTaskLater(plugin, (SquabbleMap.STARTING_IN_SECONDS - SquabbleMap.FINAL_COUNTDOWN_SECONDS) * 20L);
     }
 
     private void startCountdown() {
         new BukkitRunnable() {
-            int count = 10;
+            int count = SquabbleMap.FINAL_COUNTDOWN_SECONDS;
 
             @Override
             public void run() {
@@ -199,11 +194,11 @@ public class SquabbleManager {
     }
 
     private void teleportStaff(World world) {
-        Location staffSpawn = new Location(world, 
-                SquabbleMap.SCHEMATIC_PASTE_LOCATION.getX(), 
-                SquabbleMap.SCHEMATIC_PASTE_LOCATION.getY(), 
+        Location staffSpawn = new Location(world,
+                SquabbleMap.SCHEMATIC_PASTE_LOCATION.getX(),
+                SquabbleMap.SCHEMATIC_PASTE_LOCATION.getY(),
                 SquabbleMap.SCHEMATIC_PASTE_LOCATION.getZ());
-        
+
         for (Player player : Bukkit.getOnlinePlayers()) {
             UUID uuid = player.getUniqueId();
             if (plugin.getAdminManager().isAdmin(uuid) || plugin.getAdminManager().isDev(uuid)) {
@@ -237,7 +232,7 @@ public class SquabbleManager {
                 player.setHealth(20);
                 player.setFoodLevel(20);
                 player.getInventory().clear();
-                
+
                 alivePlayers.put(player.getUniqueId(), team);
                 giveKit(player, team);
             }
@@ -270,8 +265,9 @@ public class SquabbleManager {
     }
 
     private void giveKit(Player player, Team team) {
-        Color armorColor = getArmorColor(team.getColor());
-        
+        SquabbleMap.TeamData teamData = SquabbleMap.TEAMS.get(team.getId().toLowerCase());
+        Color armorColor = teamData != null ? teamData.armorColor : Color.WHITE;
+
         player.getInventory().setHelmet(createColoredArmor(Material.LEATHER_HELMET, armorColor));
         player.getInventory().setChestplate(createColoredArmor(Material.LEATHER_CHESTPLATE, armorColor));
         player.getInventory().setLeggings(createColoredArmor(Material.LEATHER_LEGGINGS, armorColor));
@@ -283,8 +279,7 @@ public class SquabbleManager {
         player.getInventory().addItem(new ItemStack(Material.STICK, 8));
         player.getInventory().addItem(new ItemStack(Material.COOKED_BEEF, 4));
         player.getInventory().addItem(new ItemStack(Material.STONE_PICKAXE));
-        
-        SquabbleMap.TeamData teamData = SquabbleMap.TEAMS.get(team.getId().toLowerCase());
+
         if (teamData != null) {
             player.getInventory().setItemInOffHand(new ItemStack(teamData.spawnBlockType, 64));
         }
@@ -300,35 +295,13 @@ public class SquabbleManager {
         return item;
     }
 
-    private Color getArmorColor(ChatColor color) {
-        if (color == null) return Color.WHITE;
-        return switch (color) {
-            case RED -> Color.RED;
-            case GOLD -> Color.ORANGE;
-            case YELLOW -> Color.YELLOW;
-            case GREEN -> Color.LIME;
-            case AQUA -> Color.AQUA;
-            case BLUE -> Color.BLUE;
-            case DARK_PURPLE -> Color.PURPLE;
-            case LIGHT_PURPLE -> Color.fromRGB(255, 192, 203); // pink team
-            default -> Color.WHITE;
-        };
-    }
-
-    private void fillLootBoxes(World world) {
-        for (SquabbleMap.LootLocation loot : SquabbleMap.LOOT_LOCATIONS) {
-            Block block = world.getBlockAt(loot.position.toLocation(world));
-            SquabbleLoot.fillShulkerBox(block, loot.type);
-        }
-    }
-
     private void startGame() {
         gameStarted = true;
         dropBarriers();
         Bukkit.broadcastMessage(ChatColor.GREEN + "" + ChatColor.BOLD + "GAME STARTED!");
 
         // Start 2-minute round timer
-        plugin.getTimerManager().startTimer("Round Ends In", 120, this::startOvertime);
+        plugin.getTimerManager().startTimer("Round Ends In", SquabbleMap.ROUND_DURATION_SECONDS, this::startOvertime);
 
         // Start fall elimination task
         fallEliminationTask = new BukkitRunnable() {
@@ -340,12 +313,12 @@ public class SquabbleManager {
                 }
                 for (UUID uuid : new ArrayList<>(alivePlayers.keySet())) {
                     Player player = Bukkit.getPlayer(uuid);
-                    if (player != null && (player.getLocation().getY() < 60 || player.getLocation().getY() > currentSkyHeight)) {
+                    if (player != null && (player.getLocation().getY() < SquabbleMap.FALL_ELIMINATION_MIN_Y || player.getLocation().getY() > currentSkyHeight)) {
                         handlePlayerDeath(player);
                     }
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L); // 1 sec
+        }.runTaskTimer(plugin, 0L, 20L);
 
         // Sky Border Particles
         skyBorderParticleTask = new BukkitRunnable() {
@@ -361,7 +334,6 @@ public class SquabbleManager {
                 Particle.DustOptions dust = new Particle.DustOptions(Color.RED, 1.5f);
                 for (Player p : world.getPlayers()) {
                     Location loc = p.getLocation();
-                    // keeping minimal to avoid lag
                     for (double x = -10; x <= 10; x += 2.5) {
                         for (double z = -10; z <= 10; z += 2.5) {
                             world.spawnParticle(Particle.DUST, loc.getX() + x, currentSkyHeight, loc.getZ() + z, 1, 0, 0, 0, 0, dust);
@@ -370,15 +342,14 @@ public class SquabbleManager {
                 }
             }
         }.runTaskTimer(plugin, 0L, 5L);
-
     }
 
     private void startOvertime() {
         if (!active || !gameStarted) return;
 
         Bukkit.broadcastMessage(ChatColor.RED + "" + ChatColor.BOLD + "OVERTIME: Your health has been drained.");
-        
         // Visual and audio cue for Overtime start
+
         for (Player p : Bukkit.getOnlinePlayers()) {
             p.sendTitle(ChatColor.RED + "OVERTIME", "", 10, 70, 20);
             p.playSound(p.getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.5f, 1f);
@@ -403,7 +374,8 @@ public class SquabbleManager {
                     return;
                 }
 
-                if (elapsedSeconds % 20 == 15) {
+                if (elapsedSeconds % SquabbleMap.OVERTIME_INTERVAL_SECONDS
+                        == (SquabbleMap.OVERTIME_INTERVAL_SECONDS - SquabbleMap.OVERTIME_WARNING_LEAD_SECONDS)) {
                     for (Player p : Bukkit.getOnlinePlayers()) {
                         p.sendTitle("", ChatColor.RED + "Heart drain in 5 seconds!", 0, 40, 10);
                         p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 0.5f);
@@ -411,30 +383,30 @@ public class SquabbleManager {
                 }
 
                 // Execute collapse effects every 20 seconds
-                if (elapsedSeconds > 0 && elapsedSeconds % 20 == 0) {
+                if (elapsedSeconds > 0 && elapsedSeconds % SquabbleMap.OVERTIME_INTERVAL_SECONDS == 0) {
                     for (UUID uuid : alivePlayers.keySet()) {
                         Player p = Bukkit.getPlayer(uuid);
-                        if (p != null && p.getHealth() > 6.0) {
-                            p.setHealth(Math.max(6.0, p.getHealth() - 2.0));
+                        if (p != null && p.getHealth() > SquabbleMap.OVERTIME_MIN_HEALTH) {
+                            p.setHealth(Math.max(SquabbleMap.OVERTIME_MIN_HEALTH, p.getHealth() - SquabbleMap.OVERTIME_HEALTH_DRAIN));
                             p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_HURT, 1f, 1.2f);
                         }
                     }
 
                     WorldBorder border = world.getWorldBorder();
-                    if (currentBorderSize > 2.0) {
-                        currentBorderSize = Math.max(2.0, currentBorderSize - 15.0);
-                        border.setSize(currentBorderSize, 15);
-                        Bukkit.broadcastMessage(ChatColor.YELLOW + "The border is collapsing to " + (int)currentBorderSize + " blocks!");
+                    if (currentBorderSize > SquabbleMap.OVERTIME_BORDER_MINIMUM) {
+                        currentBorderSize = Math.max(SquabbleMap.OVERTIME_BORDER_MINIMUM, currentBorderSize - SquabbleMap.OVERTIME_BORDER_SHRINK_AMOUNT);
+                        border.setSize(currentBorderSize, SquabbleMap.OVERTIME_BORDER_TRANSITION_SECONDS);
+                        Bukkit.broadcastMessage(ChatColor.YELLOW + "The border is collapsing to " + (int) currentBorderSize + " blocks!");
                     }
 
-                    if (currentSkyHeight > 85.0) {
-                        currentSkyHeight -= 10.0;
+                    if (currentSkyHeight > SquabbleMap.MIN_SKY_HEIGHT) {
+                        currentSkyHeight -= SquabbleMap.OVERTIME_SKY_SHRINK_AMOUNT;
                     }
                 }
-                
+
                 elapsedSeconds++;
             }
-        }.runTaskTimer(plugin, 0L, 20L); // Execute every second (20 ticks)
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
     public void trackBlockChange(Location loc, BlockState oldState) {
@@ -446,10 +418,10 @@ public class SquabbleManager {
         World world = Bukkit.getWorld(SquabbleMap.WORLD_NAME);
         if (world != null) {
             for (org.bukkit.entity.Entity entity : world.getEntities()) {
-                if (entity instanceof org.bukkit.entity.Item || 
-                    entity instanceof org.bukkit.entity.TNTPrimed ||
-                    entity instanceof org.bukkit.entity.Projectile ||
-                    entity instanceof org.bukkit.entity.ExperienceOrb) {
+                if (entity instanceof org.bukkit.entity.Item ||
+                        entity instanceof org.bukkit.entity.TNTPrimed ||
+                        entity instanceof org.bukkit.entity.Projectile ||
+                        entity instanceof org.bukkit.entity.ExperienceOrb) {
                     entity.remove();
                 }
             }
@@ -462,8 +434,8 @@ public class SquabbleManager {
 
         if (world != null) {
             WorldBorder border = world.getWorldBorder();
-            currentBorderSize = 100;
-            currentSkyHeight = 146;
+            currentBorderSize = SquabbleMap.STARTING_BORDER_SIZE;
+            currentSkyHeight = SquabbleMap.STARTING_SKY_HEIGHT;
             border.setSize(currentBorderSize);
             border.setCenter(0, 0);
         }
@@ -492,7 +464,7 @@ public class SquabbleManager {
 
     public void stopGame(boolean force) {
         if (!active && !force) return;
-        
+
         restoreMap();
 
         active = false;
@@ -539,13 +511,13 @@ public class SquabbleManager {
                 player.getInventory().setArmorContents(null);
                 player.getInventory().setItemInOffHand(null);
                 player.setGameMode(isStaff ? GameMode.SPECTATOR : GameMode.ADVENTURE);
-                
+
                 if (hubSpawn != null) {
                     player.teleport(hubSpawn);
                 }
             }
         }
-        alivePlayers.clear(); // moved here
+        alivePlayers.clear();
         logoutTasks.values().forEach(BukkitTask::cancel);
         logoutTasks.clear();
         lastAttacker.clear();
@@ -579,12 +551,12 @@ public class SquabbleManager {
         logoutTasks.values().forEach(BukkitTask::cancel);
         logoutTasks.clear();
         lastAttacker.clear();
-        
         // Reset World Border to starting size
+
         World world = Bukkit.getWorld(SquabbleMap.WORLD_NAME);
         if (world != null) {
             WorldBorder border = world.getWorldBorder();
-            currentBorderSize = 100;
+            currentBorderSize = SquabbleMap.STARTING_BORDER_SIZE;
             border.setSize(currentBorderSize);
             border.setCenter(0, 0);
         }
@@ -603,13 +575,13 @@ public class SquabbleManager {
                 player.setGameMode(GameMode.SPECTATOR);
             }
         }
-        
+
         displayRoundResults();
-        
         // Boss bar countdown for next round
-        nextRoundBossBar = Bukkit.createBossBar(ChatColor.GREEN + "Next round starting in 10 seconds", BarColor.GREEN, BarStyle.SEGMENTED_10);
-        
         // Add relevant players to the boss bar
+
+        nextRoundBossBar = Bukkit.createBossBar(ChatColor.GREEN + "Next round starting in " + SquabbleMap.NEXT_ROUND_SECONDS + " seconds", BarColor.GREEN, BarStyle.SEGMENTED_10);
+
         for (UUID uuid : alivePlayers.keySet()) {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null) {
@@ -624,7 +596,7 @@ public class SquabbleManager {
         }
 
         new BukkitRunnable() {
-            int timeRemaining = 10;
+            int timeRemaining = SquabbleMap.NEXT_ROUND_SECONDS;
 
             @Override
             public void run() {
@@ -636,8 +608,8 @@ public class SquabbleManager {
 
                 if (timeRemaining <= 0) {
                     nextRoundBossBar.removeAll();
-                        currentRound++;
-                    if (currentRound <= 4) {
+                    currentRound++;
+                    if (currentRound <= SquabbleMap.TOTAL_ROUNDS) {
                         startRound();
                     } else {
                         stopGame(false);
@@ -647,28 +619,27 @@ public class SquabbleManager {
                 }
 
                 nextRoundBossBar.setTitle(ChatColor.GREEN + "Next round starting in " + timeRemaining + " seconds");
-                nextRoundBossBar.setProgress((double) timeRemaining / 10.0);
+                nextRoundBossBar.setProgress((double) timeRemaining / SquabbleMap.NEXT_ROUND_SECONDS);
                 timeRemaining--;
             }
-        }.runTaskTimer(plugin, 0L, 20L); // Update every second
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
     private void displayRoundResults() {
         Bukkit.broadcastMessage("");
         Bukkit.broadcastMessage(ChatColor.WHITE + "" + ChatColor.BOLD + "Top 10 players in " + ChatColor.AQUA + "Squabble" + ChatColor.WHITE + "" + ChatColor.BOLD + "!");
-        
+
         List<Map.Entry<UUID, Integer>> topPlayers = plugin.getPlayerScoreManager().getRoundCoins().entrySet().stream()
                 .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
                 .limit(10)
                 .collect(java.util.stream.Collectors.toList());
-        
+
         for (Map.Entry<UUID, Integer> entry : topPlayers) {
             String name = Bukkit.getOfflinePlayer(entry.getKey()).getName();
             Bukkit.broadcastMessage(ChatColor.GRAY + "- " + ChatColor.YELLOW + name + ChatColor.WHITE + " (" + entry.getValue() + " coins)");
         }
         Bukkit.broadcastMessage("");
 
-        // Most Kills
         Map.Entry<UUID, Integer> mostKills = roundKills.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
                 .orElse(null);
@@ -685,31 +656,31 @@ public class SquabbleManager {
                 if (!active) return;
                 Bukkit.broadcastMessage("");
                 Bukkit.broadcastMessage(ChatColor.WHITE + "" + ChatColor.BOLD + "Most damage done in " + ChatColor.AQUA + "Squabble" + ChatColor.WHITE + "" + ChatColor.BOLD + "!");
-                
+
                 List<Map.Entry<UUID, Double>> topDamage = roundDamage.entrySet().stream()
                         .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
                         .limit(5)
                         .collect(java.util.stream.Collectors.toList());
-                
+
                 for (Map.Entry<UUID, Double> entry : topDamage) {
                     String name = Bukkit.getOfflinePlayer(entry.getKey()).getName();
                     Bukkit.broadcastMessage(ChatColor.GRAY + "- " + ChatColor.YELLOW + name + " " + ChatColor.RED + String.format("%.1f", entry.getValue()));
                 }
                 Bukkit.broadcastMessage("");
-                
                 // Standings
-                if (currentRound >= 4) { // Only show standings after round 4
+
+                if (currentRound >= SquabbleMap.TOTAL_ROUNDS) {
                     new BukkitRunnable() {
                         @Override
                         public void run() {
                             if (!active) return;
                             Bukkit.broadcastMessage("");
                             Bukkit.broadcastMessage(ChatColor.WHITE + "" + ChatColor.BOLD + "Current event standings:");
-                            
+
                             List<Team> standings = plugin.getTeamManager().getTeams().stream()
                                     .sorted((t1, t2) -> Integer.compare(t2.getScore(), t1.getScore()))
                                     .collect(java.util.stream.Collectors.toList());
-                            
+
                             for (int i = 0; i < standings.size(); i++) {
                                 Team team = standings.get(i);
                                 Bukkit.broadcastMessage(ChatColor.YELLOW.toString() + (i + 1) + ". " + team.getColor() + team.getName() + ChatColor.WHITE + ": " + ChatColor.YELLOW + team.getScore());
@@ -724,9 +695,8 @@ public class SquabbleManager {
 
     public void handlePlayerDeath(Player player) {
         if (!active || !gameStarted) return;
-        
+
         if (alivePlayers.containsKey(player.getUniqueId())) {
-            // Credit the kill to the last attacker
             UUID killerId = lastAttacker.remove(player.getUniqueId());
             if (killerId != null) {
                 Player killer = Bukkit.getPlayer(killerId);
@@ -737,15 +707,15 @@ public class SquabbleManager {
 
             alivePlayers.remove(player.getUniqueId());
             deathsThisRound++;
-            
             // 1 Coin Per Survival For the First 10 Deaths
-            if (deathsThisRound <= MAX_SURVIVAL_REWARD_DEATHS) {
+
+            if (deathsThisRound <= SquabbleMap.MAX_SURVIVAL_REWARD_DEATHS) {
                 for (UUID aliveUuid : alivePlayers.keySet()) {
                     plugin.getPlayerScoreManager().addCoins(aliveUuid, 1);
                 }
             }
         }
-        
+
         player.setGameMode(GameMode.SPECTATOR);
         checkWinCondition();
     }
@@ -778,7 +748,7 @@ public class SquabbleManager {
                 handlePlayerDeath(player);
                 logoutTasks.remove(uuid);
             }
-        }.runTaskLater(plugin, 30 * 20L); // 30 seconds
+        }.runTaskLater(plugin, 30 * 20L);
 
         logoutTasks.put(uuid, task);
     }
@@ -787,7 +757,7 @@ public class SquabbleManager {
         UUID uuid = player.getUniqueId();
         BukkitTask task = logoutTasks.remove(uuid);
         if (task != null) task.cancel();
-        
+
         if (active && gameStarted && !alivePlayers.containsKey(uuid)) {
             boolean isStaff = plugin.getAdminManager().isAdmin(uuid) || plugin.getAdminManager().isDev(uuid);
             if (!isStaff) {
@@ -801,20 +771,20 @@ public class SquabbleManager {
         if (remainingTeams.size() == 1) {
             Team winner = remainingTeams.iterator().next();
             Bukkit.broadcastMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Team " + winner.getColor() + winner.getName() + ChatColor.GOLD + " wins!");
-            
+
             String title = winner.getColor() + winner.getName();
-            String subtitle = ChatColor.WHITE + "has won Squabble Round " + currentRound + "/4";
+            String subtitle = ChatColor.WHITE + "has won Squabble Round " + currentRound + "/" + SquabbleMap.TOTAL_ROUNDS;
             for (Player p : Bukkit.getOnlinePlayers()) {
                 p.sendTitle(title, subtitle, 10, 70, 20);
             }
-            
             // 20 Coins If You Win The Round (for each alive player on the team)
+
             for (Map.Entry<UUID, Team> entry : alivePlayers.entrySet()) {
                 if (entry.getValue().equals(winner)) {
                     plugin.getPlayerScoreManager().addCoins(entry.getKey(), 20);
                 }
             }
-            
+
             distributeDamagePool();
             endRound();
         } else if (remainingTeams.isEmpty()) {
@@ -832,10 +802,10 @@ public class SquabbleManager {
 
         if (totalDamage <= 0) return;
 
-        Bukkit.broadcastMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Distributing 550 Coin Damage Pool...");
+        Bukkit.broadcastMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Distributing " + SquabbleMap.DAMAGE_POOL_TOTAL + " Coin Damage Pool...");
         for (Map.Entry<UUID, Double> entry : roundDamage.entrySet()) {
             double percentage = entry.getValue() / totalDamage;
-            int coins = (int) Math.round(percentage * DAMAGE_POOL_TOTAL);
+            int coins = (int) Math.round(percentage * SquabbleMap.DAMAGE_POOL_TOTAL);
             if (coins > 0) {
                 plugin.getPlayerScoreManager().addCoins(entry.getKey(), coins);
                 Player p = Bukkit.getPlayer(entry.getKey());

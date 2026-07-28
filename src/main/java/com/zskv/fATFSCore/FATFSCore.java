@@ -18,6 +18,7 @@ import com.zskv.fATFSCore.teams.TeamManager;
 import com.zskv.fATFSCore.bossbar.BossBarManager;
 import com.zskv.fATFSCore.minigames.Squabble.SquabbleListener;
 import com.zskv.fATFSCore.minigames.Squabble.SquabbleManager;
+import com.zskv.fATFSCore.minigames.Squabble.SquabbleMap;
 import com.zskv.fATFSCore.timer.TimerManager;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
@@ -48,6 +49,7 @@ public final class FATFSCore extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         createDataConfig();
+        SquabbleMap.load(this);
 
         this.teamManager = new TeamManager(this);
         this.scoreboardManager = new ScoreboardManager(this);
@@ -183,6 +185,7 @@ public final class FATFSCore extends JavaPlugin {
 
     public void reloadPlugin() {
         reloadConfig();
+        SquabbleMap.load(this);
         if (teamManager != null) {
             teamManager.shutdown();
         }
