@@ -1,6 +1,7 @@
 package com.zskv.fATFSCore.commands;
 
 import com.zskv.fATFSCore.FATFSCore;
+import com.zskv.fATFSCore.minigames.Squabble.SquabbleMap;
 import com.zskv.fATFSCore.teams.Team;
 import com.zskv.fATFSCore.teams.TeamManager;
 import org.bukkit.Bukkit;
@@ -231,7 +232,7 @@ public class EventCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length < 3) {
-            player.sendMessage(ChatColor.RED + "Usage: /event game <start|stop> <game_id>");
+            player.sendMessage(ChatColor.RED + "Usage: /event game <start|stop|reload> <game_id>");
             return;
         }
 
@@ -249,9 +250,24 @@ public class EventCommand implements CommandExecutor, TabCompleter {
                 }
                 plugin.getSquabbleManager().stopGame(true);
                 player.sendMessage(ChatColor.RED + "Stopping Squabble...");
+
+                    } else if (action.equals("reload")) {
+                if (args.length < 4 || !args[3].equalsIgnoreCase("confirm")) {
+                    player.sendMessage(ChatColor.YELLOW + "Are you sure? Use " + ChatColor.GOLD + "/event game reload squabble confirm" + ChatColor.YELLOW + " to reload squabble.yml.");
+                    return;
+                    }
+
+                if (plugin.getSquabbleManager().isActive()) {
+                    player.sendMessage(ChatColor.YELLOW + "Warning: a Squabble game is currently active. Spawn/barrier changes won't apply to the in-progress round, only to the next one.");
+                    }
+
+                SquabbleMap.load(plugin);
+                 player.sendMessage(ChatColor.GREEN + "Reloaded squabble.yml " + SquabbleMap.TEAMS.size() + " team(s) loaded.");
             } else {
-                player.sendMessage(ChatColor.RED + "Unknown action. Use start or stop.");
+                 player.sendMessage(ChatColor.RED + "Unknown action. Use start or stop.");
+                player.sendMessage(ChatColor.RED + "Unknown action. Use start, stop, or reload.");
             }
+
         } else if (gameId.equalsIgnoreCase("hideseek")) {
             if (action.equals("start")) {
                 plugin.getHideSeekManager().startSequence(player);
@@ -365,6 +381,7 @@ public class EventCommand implements CommandExecutor, TabCompleter {
             if (args[0].equalsIgnoreCase("game") && sender.hasPermission("event.admin")) {
                 completions.add("start");
                 completions.add("stop");
+                completions.add("reload");
             } else if (args[0].equalsIgnoreCase("start") && sender.hasPermission("event.admin")) {
                 completions.add("confirm");
             } else if (args[0].equalsIgnoreCase("timer") && sender.hasPermission("event.admin")) {
@@ -391,6 +408,7 @@ public class EventCommand implements CommandExecutor, TabCompleter {
                 completions.add("squabble");
                 completions.add("hideseek");
                 completions.add("duels");
+
             } else if (args[0].equalsIgnoreCase("team")) {
                 if (args[1].equalsIgnoreCase("join") || args[1].equalsIgnoreCase("delete")) {
                     completions.addAll(plugin.getTeamManager().getTeams().stream()
@@ -424,7 +442,9 @@ public class EventCommand implements CommandExecutor, TabCompleter {
                             .map(Player::getName)
                             .collect(Collectors.toList()));
                 }
-            } else if (args[0].equalsIgnoreCase("game") && args[1].equalsIgnoreCase("stop") && sender.hasPermission("event.admin")) {
+            } else if (args[0].equalsIgnoreCase("game")
+                    && (args[1].equalsIgnoreCase("stop") || args[1].equalsIgnoreCase("reload"))
+                    && sender.hasPermission("event.admin")) {
                 completions.add("confirm");
             }
         }
