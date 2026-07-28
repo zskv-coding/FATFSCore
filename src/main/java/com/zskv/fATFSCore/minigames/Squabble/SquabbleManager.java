@@ -697,7 +697,6 @@ public class SquabbleManager {
         if (!active || !gameStarted) return;
 
         if (alivePlayers.containsKey(player.getUniqueId())) {
-            // Credit the kill to the last attacker
             UUID killerId = lastAttacker.remove(player.getUniqueId());
             if (killerId != null) {
                 Player killer = Bukkit.getPlayer(killerId);
@@ -749,7 +748,6 @@ public class SquabbleManager {
                 handlePlayerDeath(player);
                 logoutTasks.remove(uuid);
             }
-        }.runTaskLater(plugin, 30 * 20L); // 30 seconds
         }.runTaskLater(plugin, 30 * 20L);
 
         logoutTasks.put(uuid, task);
