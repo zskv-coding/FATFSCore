@@ -28,6 +28,7 @@ public class SquabbleManager {
     private final Map<UUID, Integer> totalKillsAcrossRounds = new HashMap<>();
     private final Map<UUID, UUID> lastAttacker = new HashMap<>();
     private final Map<UUID, BukkitTask> logoutTasks = new HashMap<>();
+    private final Map<UUID, Location> preLogoutLocations = new HashMap<>();
     private final Map<Location, BlockState> changedBlocks = new HashMap<>();
     private int deathsThisRound = 0;
     private BukkitTask fallEliminationTask;
@@ -78,6 +79,7 @@ public class SquabbleManager {
         roundKills.clear();
         logoutTasks.values().forEach(BukkitTask::cancel);
         logoutTasks.clear();
+        preLogoutLocations.clear();
         lastAttacker.clear();
         changedBlocks.clear();
         deathsThisRound = 0;
@@ -126,12 +128,13 @@ public class SquabbleManager {
         roundKills.clear();
         deathsThisRound = 0;
         plugin.getPlayerScoreManager().resetRoundCoins();
-        
+
         // Reset player states for the round
 
         World world = Bukkit.getWorld(SquabbleMap.WORLD_NAME);
         if (world != null && currentRound > 1) {
             alivePlayers.clear();
+            preLogoutLocations.clear();
             teleportAndKitPlayers(world);
             teleportStaff(world);
             SquabbleLoot.restock(world, plugin);
@@ -520,6 +523,7 @@ public class SquabbleManager {
         alivePlayers.clear();
         logoutTasks.values().forEach(BukkitTask::cancel);
         logoutTasks.clear();
+        preLogoutLocations.clear();
         lastAttacker.clear();
     }
 
@@ -550,6 +554,7 @@ public class SquabbleManager {
         }
         logoutTasks.values().forEach(BukkitTask::cancel);
         logoutTasks.clear();
+        preLogoutLocations.clear();
         lastAttacker.clear();
         // Reset World Border to starting size
 
@@ -742,11 +747,15 @@ public class SquabbleManager {
         if (!active || !gameStarted || !alivePlayers.containsKey(player.getUniqueId())) return;
 
         UUID uuid = player.getUniqueId();
+
+        preLogoutLocations.put(uuid, player.getLocation().clone());
+
         BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
                 handlePlayerDeath(player);
                 logoutTasks.remove(uuid);
+                preLogoutLocations.remove(uuid);
             }
         }.runTaskLater(plugin, 30 * 20L);
 
@@ -757,6 +766,43 @@ public class SquabbleManager {
         UUID uuid = player.getUniqueId();
         BukkitTask task = logoutTasks.remove(uuid);
         if (task != null) task.cancel();
+
+        if (active && alivePlayers.containsKey(uuid)) {
+            Location returnLocation = preLogoutLocations.remove(uuid);
+            World world = Bukkit.getWorld(SquabbleMap.WORLD_NAME);
+
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!player.isOnline()) return;
+                if (!active || !alivePlayers.containsKey(uuid)) return;
+
+                Location destination = returnLocation;
+                boolean validSaved = destination != null
+                        && world != null
+                        && destination.getWorld() != null
+                        && destination.getWorld().equals(world)
+                        && destination.getY() >= SquabbleMap.FALL_ELIMINATION_MIN_Y
+                        && destination.getY() <= currentSkyHeight;
+
+                if (!validSaved) {
+                    Team team = alivePlayers.get(uuid);
+                    SquabbleMap.TeamData teamData = team != null ? SquabbleMap.TEAMS.get(team.getId().toLowerCase()) : null;
+                    if (world != null && teamData != null) {
+                        List<Location> spawns = getSpawnLocations(world, teamData);
+                        destination = !spawns.isEmpty() ? spawns.get(0) : (world != null ? world.getSpawnLocation() : null);
+                    } else if (world != null) {
+                        destination = world.getSpawnLocation();
+                    }
+                }
+
+                if (destination != null) {
+                    player.teleport(destination);
+                }
+                player.setGameMode(GameMode.SURVIVAL);
+            }, 1L);
+            return;
+        }
+
+        preLogoutLocations.remove(uuid);
 
         if (active && gameStarted && !alivePlayers.containsKey(uuid)) {
             boolean isStaff = plugin.getAdminManager().isAdmin(uuid) || plugin.getAdminManager().isDev(uuid);
