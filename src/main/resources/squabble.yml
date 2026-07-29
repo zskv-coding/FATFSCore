@@ -6,8 +6,8 @@ schematic-paste-location:
   z: 0.5
 
 settings:
-  max-survival-reward-deaths: 10
-  damage-pool-total: 550
+  max-survival-reward-deaths: 20
+  damage-pool-total: 600
   total-rounds: 4
 
   starting-border-size: 100
