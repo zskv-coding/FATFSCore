@@ -40,6 +40,9 @@ public class SquabbleManager {
     private double currentSkyHeight = 146;
     private BossBar nextRoundBossBar;
 
+    private final List<Team> eliminationOrder = new ArrayList<>();
+    private static final int[] TEAM_SURVIVAL_REWARDS = {75, 60, 50, 45, 40, 35, 30, 25, 20, 15};
+
     private static final Map<Material, Material> MINEABLE_BLOCKS = new EnumMap<>(Material.class);
     static {
         MINEABLE_BLOCKS.put(Material.COAL_ORE, Material.WOODEN_PICKAXE);
@@ -82,6 +85,7 @@ public class SquabbleManager {
         preLogoutLocations.clear();
         lastAttacker.clear();
         changedBlocks.clear();
+        eliminationOrder.clear();
         deathsThisRound = 0;
         currentBorderSize = SquabbleMap.STARTING_BORDER_SIZE;
         currentSkyHeight = SquabbleMap.STARTING_SKY_HEIGHT;
@@ -131,6 +135,7 @@ public class SquabbleManager {
 
         // Reset player states for the round
 
+        eliminationOrder.clear();
         World world = Bukkit.getWorld(SquabbleMap.WORLD_NAME);
         if (world != null && currentRound > 1) {
             alivePlayers.clear();
@@ -701,7 +706,9 @@ public class SquabbleManager {
     public void handlePlayerDeath(Player player) {
         if (!active || !gameStarted) return;
 
-        if (alivePlayers.containsKey(player.getUniqueId())) {
+        Team playerTeam = alivePlayers.get(player.getUniqueId());
+
+        if (playerTeam != null) {
             UUID killerId = lastAttacker.remove(player.getUniqueId());
             if (killerId != null) {
                 Player killer = Bukkit.getPlayer(killerId);
@@ -712,12 +719,18 @@ public class SquabbleManager {
 
             alivePlayers.remove(player.getUniqueId());
             deathsThisRound++;
-            // 1 Coin Per Survival For the First 10 Deaths
+            // 1 Coin Per Survival For the First 20 Deaths
 
             if (deathsThisRound <= SquabbleMap.MAX_SURVIVAL_REWARD_DEATHS) {
                 for (UUID aliveUuid : alivePlayers.keySet()) {
-                    plugin.getPlayerScoreManager().addCoins(aliveUuid, 1);
+                    awardCoins(aliveUuid, 1);
                 }
+            }
+
+
+            boolean teamStillAlive = alivePlayers.containsValue(playerTeam);
+            if (!teamStillAlive && !eliminationOrder.contains(playerTeam)) {
+                eliminationOrder.add(playerTeam);
             }
         }
 
@@ -732,9 +745,19 @@ public class SquabbleManager {
         totalKillsAcrossRounds.put(killer.getUniqueId(), killNumber);
         int reward = Math.max(1, 21 - killNumber);
 
-        plugin.getPlayerScoreManager().addCoins(killer.getUniqueId(), reward);
+        awardCoins(killer.getUniqueId(), reward);
         roundKills.put(killer.getUniqueId(), roundKills.getOrDefault(killer.getUniqueId(), 0) + 1);
         killer.sendMessage(ChatColor.GOLD + "Kill! +" + reward + " Coins");
+    }
+
+
+    private void awardCoins(UUID uuid, int amount) {
+        if (amount == 0) return;
+        plugin.getPlayerScoreManager().addCoins(uuid, amount);
+        Team team = plugin.getTeamManager().getPlayerTeam(uuid);
+        if (team != null) {
+            team.addScore(amount);
+        }
     }
 
     public void handleDamage(Player attacker, Player victim, double damage) {
@@ -747,6 +770,7 @@ public class SquabbleManager {
         if (!active || !gameStarted || !alivePlayers.containsKey(player.getUniqueId())) return;
 
         UUID uuid = player.getUniqueId();
+
 
         preLogoutLocations.put(uuid, player.getLocation().clone());
 
@@ -768,6 +792,7 @@ public class SquabbleManager {
         if (task != null) task.cancel();
 
         if (active && alivePlayers.containsKey(uuid)) {
+
             Location returnLocation = preLogoutLocations.remove(uuid);
             World world = Bukkit.getWorld(SquabbleMap.WORLD_NAME);
 
@@ -823,21 +848,58 @@ public class SquabbleManager {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 p.sendTitle(title, subtitle, 10, 70, 20);
             }
-            // 20 Coins If You Win The Round (for each alive player on the team)
 
-            for (Map.Entry<UUID, Team> entry : alivePlayers.entrySet()) {
-                if (entry.getValue().equals(winner)) {
-                    plugin.getPlayerScoreManager().addCoins(entry.getKey(), 20);
-                }
-            }
-
+            awardTeamSurvivalBonus(winner);
             distributeDamagePool();
             endRound();
         } else if (remainingTeams.isEmpty()) {
             Bukkit.broadcastMessage(ChatColor.YELLOW + "Game over! No teams remaining.");
+            awardTeamSurvivalBonus(null);
             distributeDamagePool();
             endRound();
         }
+    }
+
+    private void awardTeamSurvivalBonus(Team winner) {
+        List<Team> placements = new ArrayList<>();
+        if (winner != null) {
+            placements.add(winner);
+        }
+        List<Team> eliminatedReversed = new ArrayList<>(eliminationOrder);
+        Collections.reverse(eliminatedReversed);
+        placements.addAll(eliminatedReversed);
+
+        for (int i = 0; i < placements.size() && i < TEAM_SURVIVAL_REWARDS.length; i++) {
+            Team team = placements.get(i);
+            int totalReward = TEAM_SURVIVAL_REWARDS[i];
+
+            List<UUID> members = new ArrayList<>(team.getMembers());
+            if (members.isEmpty()) continue;
+
+            int base = totalReward / members.size();
+            int remainder = totalReward % members.size();
+
+            for (int m = 0; m < members.size(); m++) {
+                int amount = base + (m < remainder ? 1 : 0);
+                awardCoins(members.get(m), amount);
+            }
+
+            Bukkit.broadcastMessage(ChatColor.GOLD + "" + ChatColor.BOLD + ordinal(i + 1) + " place: "
+                    + team.getColor() + team.getName() + ChatColor.WHITE + " earns " + ChatColor.YELLOW
+                    + totalReward + ChatColor.WHITE + " team coins!");
+        }
+
+        eliminationOrder.clear();
+    }
+
+    private String ordinal(int n) {
+        if (n % 100 >= 11 && n % 100 <= 13) return n + "th";
+        return switch (n % 10) {
+            case 1 -> n + "st";
+            case 2 -> n + "nd";
+            case 3 -> n + "rd";
+            default -> n + "th";
+        };
     }
 
     private void distributeDamagePool() {
@@ -853,7 +915,7 @@ public class SquabbleManager {
             double percentage = entry.getValue() / totalDamage;
             int coins = (int) Math.round(percentage * SquabbleMap.DAMAGE_POOL_TOTAL);
             if (coins > 0) {
-                plugin.getPlayerScoreManager().addCoins(entry.getKey(), coins);
+                awardCoins(entry.getKey(), coins);
                 Player p = Bukkit.getPlayer(entry.getKey());
                 if (p != null) {
                     p.sendMessage(ChatColor.YELLOW + "You dealt " + String.format("%.1f", percentage * 100) + "% of total damage and received " + coins + " coins!");
