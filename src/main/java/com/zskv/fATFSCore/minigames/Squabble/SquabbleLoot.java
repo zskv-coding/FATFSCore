@@ -82,6 +82,22 @@ public class SquabbleLoot {
         templateCaptured = false;
     }
 
+    public static void forceRecapture(World world, Plugin plugin) {
+        File file = new File(plugin.getDataFolder(), "squabble-loot-template.yml");
+        if (file.exists() && !file.delete()) {
+            plugin.getLogger().warning("Squabble loot: failed to delete old saved loot template at " + file.getPath());
+        }
+
+        LOOT_TEMPLATE.clear();
+        templateCaptured = false;
+
+        captureTemplate(world, plugin);
+        saveTemplate(plugin);
+
+        plugin.getLogger().info("Squabble loot: discarded previous saved template and captured a fresh loot template with "
+                + LOOT_TEMPLATE.size() + " shulker box(es) for this game.");
+    }
+
     private static void saveTemplate(Plugin plugin) {
         File file = new File(plugin.getDataFolder(), "squabble-loot-template.yml");
         YamlConfiguration config = new YamlConfiguration();

@@ -107,6 +107,7 @@ public class SquabbleManager {
 
         teleportAndKitPlayers(world);
         teleportStaff(world);
+        SquabbleLoot.forceRecapture(world, plugin);
         SquabbleLoot.restock(world, plugin);
 
         for (UUID uuid : alivePlayers.keySet()) {
@@ -475,6 +476,11 @@ public class SquabbleManager {
 
         restoreMap();
 
+        World lootWorld = Bukkit.getWorld(SquabbleMap.WORLD_NAME);
+        if (lootWorld != null) {
+            SquabbleLoot.restock(lootWorld, plugin);
+        }
+
         active = false;
         gameStarted = false;
         currentRound = 0;
@@ -727,7 +733,6 @@ public class SquabbleManager {
                 }
             }
 
-
             boolean teamStillAlive = alivePlayers.containsValue(playerTeam);
             if (!teamStillAlive && !eliminationOrder.contains(playerTeam)) {
                 eliminationOrder.add(playerTeam);
@@ -771,7 +776,6 @@ public class SquabbleManager {
 
         UUID uuid = player.getUniqueId();
 
-
         preLogoutLocations.put(uuid, player.getLocation().clone());
 
         BukkitTask task = new BukkitRunnable() {
@@ -792,7 +796,6 @@ public class SquabbleManager {
         if (task != null) task.cancel();
 
         if (active && alivePlayers.containsKey(uuid)) {
-
             Location returnLocation = preLogoutLocations.remove(uuid);
             World world = Bukkit.getWorld(SquabbleMap.WORLD_NAME);
 
